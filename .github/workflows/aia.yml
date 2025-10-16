@@ -1,4 +1,4 @@
-name: Run Scripts needed for AIA back up files
+name: AIA Backup Files
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 jobs:
-  run-and-commit:
+  run-and-commit-aia:
     runs-on: ubuntu-latest
     env:
       PY_SCRIPT: get_pointing_table.py
@@ -33,7 +33,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Run the script
+      - name: Run the script(s)
         run: python "$PY_SCRIPT"
       - name: Publish generated output(s)
         shell: bash
