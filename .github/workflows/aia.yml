@@ -1,4 +1,4 @@
-name: Get and Update Pointing Table
+name: Run Scripts needed for AIA back up files
 
 on:
   push:
@@ -44,29 +44,30 @@ jobs:
           set -euo pipefail
 
           if [ ! -d "$OUTPUT_DIR" ] || [ -z "$(ls -A "$OUTPUT_DIR")" ]; then
-            echo "::warning::No files produced in $OUTPUT_DIR; skipping commit."
+            echo "::notice::No files produced in $OUTPUT_DIR; skipping commit."
             exit 0
           fi
 
-          # Prepare a clean staging area
-          TMP_DIR="$(mktemp -d)"
-          mkdir -p "$TMP_DIR/$PUBLISH_DIR"
-          rsync -a --delete "$OUTPUT_DIR"/ "$TMP_DIR/$PUBLISH_DIR"/
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory '*'
 
-          # Create a brand-new repo/branch with no history
-          pushd "$TMP_DIR" >/dev/null
-            git init
-            git checkout -b "$TARGET_BRANCH"
-            git config user.name  "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          WORKTREE_DIR="$(mktemp -d)"
+          git worktree add --detach "$WORKTREE_DIR"
+
+          pushd "$WORKTREE_DIR" >/dev/null
+            # Start a brand-new orphan branch (no parents/history)
+            git switch --orphan "$TARGET_BRANCH"
+
+            # Ensure a clean tree, then stage just your artifacts under PUBLISH_DIR
+            find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+            mkdir -p "$PUBLISH_DIR"
+            rsync -a --delete "$OLDPWD/$OUTPUT_DIR"/ "$PUBLISH_DIR"/
 
             git add -A
             SHORT_SHA="$(echo "${GITHUB_SHA:-}" | cut -c1-7)"
             git commit -m "chore: publish generated output from ${SHORT_SHA} (single-commit) [skip ci]"
-
-            # Push as a history-replacing snapshot
-            git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            git push --force origin "$TARGET_BRANCH"
+            git push -f origin "$TARGET_BRANCH"
           popd >/dev/null
 
-          rm -rf "$TMP_DIR"
+          git worktree remove "$WORKTREE_DIR" --force
