@@ -17,8 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OUTPUT_DIR: generated
-      STATIC_DIR: aia
-      TARGET_BRANCH: aia
     steps:
       - name: Check out repo
         uses: actions/checkout@v6
@@ -37,10 +35,6 @@ jobs:
         run: python aia/get_pointing_table.py
       - name: Publish generated output(s)
         shell: bash
-        env:
-          PUBLISH_DIR: ${{ env.OUTPUT_DIR }}
-          OUTPUT_DIR: ${{ env.OUTPUT_DIR }}
-          STATIC_DIR: ${{ env.STATIC_DIR }}
         run: |
           set -euo pipefail
 
@@ -58,19 +52,19 @@ jobs:
 
           pushd "$WORKTREE_DIR" >/dev/null
             # Start a brand-new orphan branch (no parents/history)
-            git switch --orphan "$TARGET_BRANCH"
+            git switch --orphan "aia"
 
-            # Ensure a clean tree, then stage generated output and static AIA files
+            # Ensure a clean tree, then stage generated output and static files
             find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-            mkdir -p "$PUBLISH_DIR"
-            rsync -a --delete "$OLDPWD/$OUTPUT_DIR"/ "$PUBLISH_DIR"/
-            mkdir -p "$STATIC_DIR"
-            rsync -a --delete "$OLDPWD/$STATIC_DIR"/ "$STATIC_DIR"/
+            mkdir -p "$OUTPUT_DIR"
+            rsync -a --delete "$OLDPWD/$OUTPUT_DIR"/ "$OUTPUT_DIR"/
+            mkdir -p "static"
+            rsync -a --delete "$OLDPWD/aia/static"/ "static"/
 
             git add -A
             SHORT_SHA="$(echo "${GITHUB_SHA:-}" | cut -c1-7)"
             git commit -m "chore: publish generated output from ${SHORT_SHA} (single-commit) [skip ci]"
-            git push -f origin "$TARGET_BRANCH"
+            git push -f origin "aia"
           popd >/dev/null
 
           git worktree remove "$WORKTREE_DIR" --force
