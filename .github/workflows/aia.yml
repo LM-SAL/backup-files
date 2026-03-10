@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OUTPUT_DIR: generated
+      STATIC_DIR: aia
       TARGET_BRANCH: aia
     steps:
       - name: Check out repo
@@ -39,6 +40,7 @@ jobs:
         env:
           PUBLISH_DIR: ${{ env.OUTPUT_DIR }}
           OUTPUT_DIR: ${{ env.OUTPUT_DIR }}
+          STATIC_DIR: ${{ env.STATIC_DIR }}
         run: |
           set -euo pipefail
 
@@ -58,10 +60,12 @@ jobs:
             # Start a brand-new orphan branch (no parents/history)
             git switch --orphan "$TARGET_BRANCH"
 
-            # Ensure a clean tree, then stage just your artifacts under PUBLISH_DIR
+            # Ensure a clean tree, then stage generated output and static AIA files
             find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
             mkdir -p "$PUBLISH_DIR"
             rsync -a --delete "$OLDPWD/$OUTPUT_DIR"/ "$PUBLISH_DIR"/
+            mkdir -p "$STATIC_DIR"
+            rsync -a --delete "$OLDPWD/$STATIC_DIR"/ "$STATIC_DIR"/
 
             git add -A
             SHORT_SHA="$(echo "${GITHUB_SHA:-}" | cut -c1-7)"
