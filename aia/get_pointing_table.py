@@ -6,7 +6,7 @@ import drms
 import pandas as pd
 from pytz import utc
 
-WAVELENGTHS = ("094", "171", "193", "211", "304", "335", "1600", "1700", "4500")
+WAVELENGTHS = ("094", "131", "171", "193", "211", "304", "335", "1600", "1700", "4500")
 NEEDED_KEYS = ["T_START", "T_STOP"] + [
     f"A_{wl}_{suffix}" for wl in WAVELENGTHS for suffix in ("X0", "Y0", "IMSCALE", "INSTROT")
 ]
