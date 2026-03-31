@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * */3'  # At 00:00 on Sunday
+    - cron: '0 0 * * */3'  # Runs at 00:00, every 3 days of the week
 
 permissions:
   contents: write
