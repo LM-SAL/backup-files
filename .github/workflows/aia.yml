@@ -19,7 +19,7 @@ jobs:
       OUTPUT_DIR: generated
     steps:
       - name: Check out repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Python
