@@ -2,3 +2,4 @@ drms
 pandas
 pytz
 tqdm
+packaging
