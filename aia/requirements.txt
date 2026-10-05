@@ -1,5 +1,3 @@
 drms
 pandas
-pytz
-tqdm
-packaging
+packaging  # drms imports it but doesn't declare it
