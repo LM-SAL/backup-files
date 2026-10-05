@@ -1,10 +1,14 @@
-import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
+"""
+Fetch the AIA master pointing table from JSOC and save it as a CSV.
+"""
 
-import drms
+import os
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import cast
+
+import drms  # type: ignore[import-untyped]
 import pandas as pd
-from pytz import utc
 
 WAVELENGTHS = ("094", "131", "171", "193", "211", "304", "335", "1600", "1700", "4500")
 NEEDED_KEYS = ["T_START", "T_STOP"] + [
@@ -25,20 +29,16 @@ def _build_time_ranges(
     return ranges
 
 
-def _query_range(start: pd.Timestamp, end: pd.Timestamp, keys: list[str]) -> pd.DataFrame:
-    client = drms.Client()
+def _query_range(time_range: tuple[pd.Timestamp, pd.Timestamp]) -> pd.DataFrame:
+    start, end = time_range
     rec = f"{SERIES}[{start.strftime('%Y-%m-%dT%H:%M:%S')}Z-{end.strftime('%Y-%m-%dT%H:%M:%S')}Z]"
-    df = client.query(rec, key=keys)
-    if df.empty:
-        msg = f"No data returned for time range {start} to {end}"
-        raise ValueError(msg)
-    return df.sort_values("T_START")
+    return cast("pd.DataFrame", drms.Client().query(rec, key=NEEDED_KEYS))
 
 
 def get_and_save_pointing_table(
     save_path: Path,
     months_per_chunk: int = 12,
-    workers: int = 1,
+    workers: int = 4,
 ) -> None:
     """
     Get and save the AIA pointing table to CSV quickly and politely.
@@ -50,47 +50,19 @@ def get_and_save_pointing_table(
     months_per_chunk : int, optional
         Size of each time chunk in months (default 12).
     workers : int, optional
-        Number of parallel workers. 1 = sequential (default).
+        Number of parallel workers (default 4).
         Keep small (<= 4) to be kind to JSOC.
     """
     start_date = pd.Timestamp("2010-05-13T00:00:00Z")
-    end_date = pd.Timestamp.now(tz=utc)
+    end_date = pd.Timestamp.now(tz="UTC")
     time_ranges = _build_time_ranges(start_date, end_date, months_per_chunk)
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        df = pd.concat(ex.map(_query_range, time_ranges))
+    # DRMS [t1-t2] ranges include both ends, so each chunk boundary comes back twice
+    df = df.drop_duplicates("T_START").sort_values("T_START")
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    wrote_header = False
-    try:
-        if workers <= 1:
-            client = drms.Client()
-            with save_path.open("w", newline="") as f:
-                for start, end in time_ranges:
-                    rec = f"{SERIES}[{start.strftime('%Y-%m-%dT%H:%M:%S')}Z-{end.strftime('%Y-%m-%dT%H:%M:%S')}Z]"
-                    df = client.query(rec, key=NEEDED_KEYS)
-                    if df.empty:
-                        msg = f"No data returned for time range {start} to {end}"
-                        raise ValueError(msg)  # NOQA: TRY301
-                    df = df.sort_values("T_START")
-                    df.to_csv(f, index=False, header=not wrote_header)
-                    wrote_header = True
-        else:
-            results: list[pd.DataFrame | None] = [None] * len(time_ranges)
-            with ThreadPoolExecutor(max_workers=workers) as ex:
-                fut_to_idx = {
-                    ex.submit(_query_range, start, end, NEEDED_KEYS): i for i, (start, end) in enumerate(time_ranges)
-                }
-                for fut in as_completed(fut_to_idx):
-                    i = fut_to_idx[fut]
-                    results[i] = fut.result()
-            with save_path.open("w", newline="") as f:
-                for df in results:
-                    if df is None or df.empty:
-                        continue
-                    df.to_csv(f, index=False, header=not wrote_header)
-                    wrote_header = True
-    except Exception as e:
-        msg = f"Unable to create the JSOC table.\nError message: {e}"
-        raise OSError(msg) from e
+    df.to_csv(save_path, index=False)
 
 
 if __name__ == "__main__":
-    out_dir = Path(os.environ["OUTPUT_DIR"])
-    get_and_save_pointing_table(out_dir / "aia_pointing_table.csv", months_per_chunk=12, workers=4)
+    get_and_save_pointing_table(Path(os.environ["OUTPUT_DIR"]) / "aia_pointing_table.csv")

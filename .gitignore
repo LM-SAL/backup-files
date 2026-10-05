@@ -29,7 +29,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-sunpy/_version.py
 requirements-min.txt
 
 # PyInstaller

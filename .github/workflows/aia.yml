@@ -7,7 +7,8 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * */3'  # Runs at 00:00, every 3 days of the week
+    # 03:17 UTC Sun/Wed/Sat; off the hour, as GitHub delays (or drops) jobs queued at :00
+    - cron: '17 3 * * 0,3,6'
 
 permissions:
   contents: write
@@ -15,37 +16,42 @@ permissions:
 jobs:
   run-and-commit-aia:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       OUTPUT_DIR: generated
     steps:
       - name: Check out repo
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # the size check below needs origin/aia
+          persist-credentials: true  # the publish step pushes with these
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
           cache: 'pip'
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r aia/requirements.txt
+        run: pip install -r aia/requirements.txt
       - name: Run the script(s)
         run: python aia/get_pointing_table.py
+      - name: Check the new table is not smaller than the published one
+        shell: bash
+        run: |
+          # sort -u: older published tables had duplicate rows at the yearly chunk boundaries
+          old=$(git show origin/aia:generated/aia_pointing_table.csv | sort -u | wc -l)
+          new=$(wc -l < "$OUTPUT_DIR/aia_pointing_table.csv")
+          if [ "$new" -lt "$old" ]; then
+            echo "::error::New table has $new lines but the published one has $old; not publishing."
+            exit 1
+          fi
       - name: Publish generated output(s)
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
 
-          if [ ! -d "$OUTPUT_DIR" ] || [ -z "$(ls -A "$OUTPUT_DIR")" ]; then
-            echo "::notice::No files produced in $OUTPUT_DIR; skipping commit."
-            exit 0
-          fi
-
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory '*'
 
           WORKTREE_DIR="$(mktemp -d)"
           git worktree add --detach "$WORKTREE_DIR"

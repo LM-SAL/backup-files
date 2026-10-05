@@ -4,23 +4,42 @@ repos:
     hooks:
       - id: docformatter
         args: ["--in-place", "--pre-summary-newline", "--make-summary-multi"]
-    # This should be before any formatting hooks like isort
+    # This should be before any formatting hooks like ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: "v0.15.20"
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: ["--fix", "--unsafe-fixes"]
       - id: ruff-format
-  - repo: https://github.com/PyCQA/isort
-    rev: 9.0.0a3
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.4.0
     hooks:
-      - id: isort
-        exclude: ".*(.fits|.fts|.fit|.header|.txt|tca.*|extern.*|irispy/extern)$"
+      - id: mypy
+        args: ["--strict"]
+        additional_dependencies: [drms, pandas-stubs]
+  - repo: https://github.com/Mateusz-Grzelinski/actionlint-py
+    rev: v1.7.12.25
+    hooks:
+      - id: actionlint
+        additional_dependencies: [shellcheck-py]
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.1
+    hooks:
+      - id: zizmor
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.38.2
+    hooks:
+      - id: check-dependabot
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       - id: check-ast
       - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-illegal-windows-names
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: detect-private-key
       - id: trailing-whitespace
       - id: check-yaml
       - id: debug-statements
