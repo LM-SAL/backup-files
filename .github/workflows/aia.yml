@@ -45,7 +45,8 @@ jobs:
             exit 1
           fi
       - name: Publish generated output(s)
-        if: github.event_name != 'pull_request'
+        # Only main publishes; PRs and manual runs from other branches stop after the checks
+        if: github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
@@ -57,8 +58,8 @@ jobs:
           git worktree add --detach "$WORKTREE_DIR"
 
           pushd "$WORKTREE_DIR" >/dev/null
-            # Start a brand-new orphan branch (no parents/history)
-            git switch --orphan "aia"
+            # One data commit on top of this main commit, so GitHub shows aia as "1 ahead, 0 behind"
+            git switch -C "aia"
 
             # Ensure a clean tree, then stage generated output and static files
             find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
@@ -69,7 +70,7 @@ jobs:
 
             git add -A
             SHORT_SHA="$(echo "${GITHUB_SHA:-}" | cut -c1-7)"
-            git commit -m "chore: publish generated output from ${SHORT_SHA} (single-commit) [skip ci]"
+            git commit -m "chore: publish generated output from ${SHORT_SHA} [skip ci]"
             git push -f origin "aia"
           popd >/dev/null
 
