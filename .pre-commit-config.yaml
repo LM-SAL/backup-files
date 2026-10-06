@@ -6,7 +6,7 @@ repos:
         args: ["--in-place", "--pre-summary-newline", "--make-summary-multi"]
     # This should be before any formatting hooks like ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.15.20"
+    rev: "v0.16.10"
     hooks:
       - id: ruff-check
         args: ["--fix", "--unsafe-fixes"]
@@ -50,7 +50,7 @@ repos:
       - id: mixed-line-ending
         exclude: ".*(.fits|.fts|.fit|.header|.txt|tca.*)$"
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: codespell
         args: [ "--write-changes" ]
