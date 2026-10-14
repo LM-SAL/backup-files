@@ -7,8 +7,9 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
   schedule:
-    # 03:17 UTC Sun/Wed/Sat; off the hour, as GitHub delays (or drops) jobs queued at :00
-    - cron: '17 3 * * 0,3,6'
+    # Daily at 10:17 UTC (02:17 PST / 03:17 PDT), off-peak for California;
+    # off the hour, as GitHub delays (or drops) jobs queued at :00
+    - cron: '17 10 * * *'
 
 permissions:
   contents: write
