@@ -6,8 +6,9 @@ SolarSoft's ``aia_V9_fullemiss.genx`` (1 to 901 angstroms in steps of 0.1,
 log T 4 to 9 in steps of 0.05) and with its plasma: the coronal abundances of
 Feldman (1992), every element at least as abundant as zinc, the ionization
 equilibrium of CHIANTI, a constant pressure of 1e15 K cm^-3, proton rates,
-and the He II 303.786 angstrom line boosted by 20 as ``aia_bp_make_emiss``
-does. The emission measure is that of n_e n_H.
+and both members of the He II 304 angstrom doublet boosted by 20 as
+``aia_bp_make_emiss`` intends (its V9 file boosted only one, see ``BOOST``).
+The emission measure is that of n_e n_H.
 
 Each line is shared between the two grid wavelengths around it, the nearer
 one getting the larger share, rather than moved to the nearest one as
@@ -62,10 +63,13 @@ PRESSURE = 1e15 * u.K / u.cm**3
 ABUNDANCE = "sun_coronal_1992_feldman_ext"
 ABUNDANCE_MIN = 1e-7  # zinc, the least abundant element in the V9 emissivity, is just above
 IONIZATION_FRACTION = "chianti"
-# aia_bp_make_emiss boosts the 1s 2S1/2 - 2p 2P1/2 member of the He II doublet at 303.786 A
-# by 20 for its optical depth. Keyed by fiasco's level labels, which it makes from the energy
-# levels of CHIANTI; CHIANTI 11's own line labels are wrong for these levels.
-BOOST = {("He 2", "1s 2S1/2", "2p 2P1/2"): 20}
+# aia_bp_make_emiss boosts both members of the He II 304 doublet by 20 for its optical depth
+# ("to agree with V&R"). It matches them by exact wavelength, 303.78101 and 303.78601, so the
+# V6 and V8 files (CHIANTI 7.1.3) boosted both but the V9 file (CHIANTI 9.0.1, which lists the
+# strong 2p 2P3/2 member at 303.780) boosted only the weak one. This follows the intent. Keyed
+# by fiasco's level labels, made from CHIANTI's energy levels; CHIANTI 11's line labels are
+# wrong for these levels.
+BOOST = {("He 2", "1s 2S1/2", "2p 2P1/2"): 20, ("He 2", "1s 2S1/2", "2p 2P3/2"): 20}
 WORKER_GIGABYTES = 0.25  # what a process takes before it computes an ion
 HC = (astropy.constants.h * astropy.constants.c).to_value(u.erg * u.AA)
 UNIT = u.erg * u.cm**3 / u.s / u.AA
